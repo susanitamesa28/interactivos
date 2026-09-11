@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ejemplo m2</title>
+ <style>
+    :root {
+      --primary-color: #0035E5;
+      --secondary-color: #002BB8;
+      --accent-color: #E6EBFF;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 24px;
+      background: #f5f5f5;
+      color: #222;
+    }
+
+    .wrap {
+      max-width: 1000px;
+      margin: 0 auto;
+      background: #fff;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+    }
+
+    h1 {
+      margin-top: 0;
+      color: var(--primary-color);
+    }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin: 24px 0 16px;
+    }
+
+    .tab-button {
+      border: 1px solid var(--secondary-color);
+      background: #fff;
+      padding: 10px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      color: var(--primary-color);
+    }
+
+    .tab-button.active,
+    .button-link {
+      background: var(--primary-color);
+      color: #fff;
+      border-color: var(--primary-color);
+    }
+
+    .tab-panel {
+      display: none;
+    }
+
+    .tab-panel.active {
+      display: block;
+    }
+
+    .block {
+      margin-bottom: 16px;
+      padding: 16px;
+      border: 1px solid var(--accent-color);
+      border-radius: 10px;
+      background: var(--accent-color);
+    }
+
+    .block img,
+    .block iframe {
+      max-width: 100%;
+      border-radius: 8px;
+    }
+
+    .button-link {
+      display: inline-block;
+      padding: 10px 14px;
+      border-radius: 8px;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>ejemplo m2</h1>
+    <p></p>
+
+    <div class="tabs">
+      <button class="tab-button active" data-tab="0">ejemplo 1</button><button class="tab-button " data-tab="1">ejemplo 2</button>
+    </div>
+
+    
+          <div class="tab-panel active" data-panel="0">
+            <div class="block"><p>Nuevo bloque de texto</p></div><div class="block"><img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTpvRRub-ODLG5AAHLD4g1Hyx1X1RAbvUPuBpdM1whwQqdOOQiZzfSvuDtGrRgADTc-HMNwlumHxyAG4GFg7IKcs25oU0D2Qm9lWmwBpz0&amp;s=10" alt=" ftyuyrwsxfg" /></div><div class="block"><iframe src="https://www.youtube.com/watch?v=6y8s_OsFzL8" title="Video" width="100%" height="400" allowfullscreen></iframe></div>
+          </div>
+        
+          <div class="tab-panel " data-panel="1">
+            <div class="block"><p>Nuevo bloque de texto</p></div><div class="block"><a class="button-link" href="https://exahttps://purina.com.mx/purina/perros/cuanto-vive-un-perromple.com" target="_blank" rel="noopener noreferrer">Ir</a></div>
+          </div>
+        
+  </div>
+
+  <script>
+    const tabButtons = document.querySelectorAll(".tab-button");
+    const tabPanels = document.querySelectorAll(".tab-panel");
+
+    tabButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        const index = button.getAttribute("data-tab");
+
+        tabButtons.forEach((btn) => btn.classList.remove("active"));
+        tabPanels.forEach((panel) => panel.classList.remove("active"));
+
+        button.classList.add("active");
+
+        document
+          .querySelector('[data-panel="' + index + '"]')
+          ?.classList.add("active");
+      });
+    });
+  </script>
+</body>
+</html>
