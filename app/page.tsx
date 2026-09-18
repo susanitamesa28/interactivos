@@ -13,7 +13,7 @@ export default function Home() {
         </p>
 
         <Link
-          href="/interactivos/new/"
+          href="/new"
           className="mt-6 inline-flex rounded-md bg-blue-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
         >
           Nuevo interactivo
