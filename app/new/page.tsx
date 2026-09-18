@@ -246,16 +246,17 @@ useEffect(() => {
     return;
   }
 
+  const activeUser = user;
   let isMounted = true;
 
   async function loadExistingProject() {
     setIsCloudLoading(true);
     setCloudMessage("");
 
-    const { data, error } = await supabase
+    const { data: existingProject, error } = await supabase
       .from("projects")
       .select("id")
-      .eq("user_id", user.id)
+      .eq("user_id", activeUser.id)
       .order("updated_at", { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -272,8 +273,8 @@ useEffect(() => {
       return;
     }
 
-    if (data) {
-      setCloudProjectId(data.id);
+    if (existingProject) {
+      setCloudProjectId(existingProject.id);
     }
   }
 
