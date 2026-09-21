@@ -220,6 +220,7 @@ export default function NewInteractivePage() {
   const [saved, setSaved] = useState(true);
   const [exportErrors, setExportErrors] = useState<string[]>([]);
   const importInputRef = useRef<HTMLInputElement | null>(null);
+  const importHtmlInputRef = useRef<HTMLInputElement | null>(null);
   const exportErrorsRef = useRef<HTMLDivElement>(null);
   const canUndo = history.past.length > 0;
   const canRedo = history.future.length > 0;
@@ -714,7 +715,178 @@ async function handleDeleteProject(project: CloudProject) {
       event.target.value = "";
     }
   }
+function handleOpenImportHtmlDialog() {
+  importHtmlInputRef.current?.click();
+}
+async function handleImportHtml(
+  event: ChangeEvent<HTMLInputElement>
+) {
+  const file = event.target.files?.[0];
 
+  if (!file) return;
+
+  try {
+    const html = await file.text();
+    const document = new DOMParser().parseFromString(
+      html,
+      "text/html"
+    );
+
+    const format = document
+      .querySelector('meta[name="interactivos-format"]')
+      ?.getAttribute("content");
+
+    if (format !== "interactivos-html-v1") {
+      window.alert(
+        "Este archivo HTML no fue generado por Interactivos LMS."
+      );
+      return;
+    }
+
+    const titleElement = document.querySelector(
+      '[data-interactivos-title="true"]'
+    );
+
+    const descriptionElement = document.querySelector(
+      '[data-interactivos-description="true"]'
+    );
+
+    const titleValue = titleElement?.textContent?.trim() ?? "";
+    const descriptionValue =
+      descriptionElement?.textContent?.trim() ?? "";
+
+    const importedTabs: Tab[] = Array.from(
+      document.querySelectorAll<HTMLElement>(
+        '[data-interactivos-tab="true"]'
+      )
+    ).map((tabElement) => {
+      const tabId =
+        tabElement.dataset.tabId || crypto.randomUUID();
+
+      const tabTitle =
+        tabElement.dataset.tabTitle ||
+        tabElement.querySelector("h2")?.textContent?.trim() ||
+        "Pestaña";
+
+      const blocks: Tab["blocks"] = Array.from(
+        tabElement.querySelectorAll<HTMLElement>(
+          '[data-interactivos-block="true"]'
+        )
+      )
+        .map((blockElement) => {
+          const blockType = blockElement.dataset.blockType;
+          const blockId =
+            blockElement.dataset.blockId || crypto.randomUUID();
+
+          if (blockType === "text") {
+            return {
+              id: blockId,
+              type: "text",
+              data:
+                blockElement.dataset.blockData ||
+                blockElement.textContent?.trim() ||
+                "",
+            };
+          }
+
+          if (blockType === "image") {
+            const image = blockElement.querySelector("img");
+            if (!image?.src) return null;
+
+            return {
+              id: blockId,
+              type: "image",
+              data: {
+                src: image.getAttribute("src") || image.src,
+                alt: image.getAttribute("alt") || "",
+              },
+            };
+          }
+
+          if (blockType === "video") {
+            const iframe = blockElement.querySelector("iframe");
+            if (!iframe?.src) return null;
+
+            return {
+              id: blockId,
+              type: "video",
+              data: {
+                src: iframe.getAttribute("src") || iframe.src,
+              },
+            };
+          }
+
+          if (blockType === "button") {
+            const link = blockElement.querySelector("a");
+            if (!link?.href) return null;
+
+            return {
+              id: blockId,
+              type: "button",
+              data: {
+                label: link.textContent?.trim() || "Botón",
+                url: link.getAttribute("href") || link.href,
+              },
+            };
+          }
+
+          return null;
+        })
+        .filter(
+          (
+            block
+          ): block is Tab["blocks"][number] => block !== null
+        );
+
+      return {
+        id: tabId,
+        title: tabTitle,
+        content: "",
+        blocks:
+          blocks.length > 0
+            ? blocks
+            : [
+                {
+                  id: crypto.randomUUID(),
+                  type: "text",
+                  data: "",
+                },
+              ],
+      };
+    });
+
+    if (importedTabs.length === 0) {
+      window.alert(
+        "El HTML no contiene pestañas reconocibles."
+      );
+      return;
+    }
+
+    dispatch({
+      type: "RESET_HISTORY",
+      project: {
+        title: titleValue || "Nuevo interactivo",
+        description: descriptionValue,
+        tabs: importedTabs,
+        activeTab: 0,
+        theme: "default",
+      },
+    });
+
+    setCloudProjectId(null);
+    setCloudMessage(
+      "HTML importado. Guarda el proyecto para conservarlo en la nube."
+    );
+    setExportErrors([]);
+  } catch (error) {
+    console.error("No se pudo importar el HTML:", error);
+    window.alert(
+      "No se pudo leer el archivo HTML. Verifica que sea válido."
+    );
+  } finally {
+    event.target.value = "";
+  }
+}
   function handleExport() {
     const errors: string[] = [];
     if (!title.trim()) errors.push("El título del interactivo es obligatorio.");
@@ -770,7 +942,14 @@ async function handleDeleteProject(project: CloudProject) {
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta
+    name="interactivos-format"
+    content="interactivos-html-v1"
+  />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  />
   <title>${safeTitle}</title>
   <style>
     :root { --primary-color: ${exportColors.primary}; --secondary-color: ${exportColors.secondary}; --accent-color: ${exportColors.accent}; }
@@ -789,20 +968,80 @@ async function handleDeleteProject(project: CloudProject) {
 </head>
 <body>
   <div class="wrap">
-    <h1>${safeTitle}</h1>
-    <p>${safeDescription}</p>
+    <h1 data-interactivos-title="true">${safeTitle}</h1>
+<p data-interactivos-description="true">${safeDescription}</p>
     <div class="tabs">
       ${tabs.map((tab, index) => `<button class="tab-button ${index === 0 ? "active" : ""}" data-tab="${index}">${escapeHtml(tab.title)}</button>`).join("")}
     </div>
-    ${tabs.map((tab, index) => `<div class="tab-panel ${index === 0 ? "active" : ""}" data-panel="${index}">${tab.blocks.map((block) => {
-      switch (block.type) {
-        case "text": return `<div class="block"><p>${escapeHtml(block.data)}</p></div>`;
-        case "image": return `<div class="block"><img src="${escapeHtml(block.data.src)}" alt="${escapeHtml(block.data.alt || "")}" /></div>`;
-        case "button": return `<div class="block"><a class="button-link" href="${escapeHtml(block.data.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(block.data.label)}</a></div>`;
-        case "video": return `<div class="block"><iframe src="${escapeHtml(block.data.src)}" title="Video" width="100%" height="400" allowfullscreen></iframe></div>`;
-        default: return "";
-      }
-    }).join("")}</div>`).join("")}
+  ${tabs
+  .map(
+    (tab, index) => `
+      <div
+        class="tab-panel ${index === 0 ? "active" : ""}"
+        data-panel="${index}"
+        data-interactivos-tab="true"
+        data-tab-id="${escapeHtml(tab.id)}"
+        data-tab-title="${escapeHtml(tab.title)}"
+      >
+        ${tab.blocks
+          .map((block) => {
+            switch (block.type) {
+              case "text":
+                return `<div
+  class="block"
+  data-interactivos-block="true"
+  data-block-type="text"
+  data-block-id="${escapeHtml(block.id)}"
+  data-block-data="${escapeHtml(block.data)}"
+><p>${escapeHtml(block.data)}</p></div>`;
+
+              case "image":
+                return `<div
+  class="block"
+  data-interactivos-block="true"
+  data-block-type="image"
+  data-block-id="${escapeHtml(block.id)}"
+><img
+  src="${escapeHtml(block.data.src)}"
+  alt="${escapeHtml(block.data.alt || "")}"
+/></div>`;
+
+              case "button":
+                return `<div
+  class="block"
+  data-interactivos-block="true"
+  data-block-type="button"
+  data-block-id="${escapeHtml(block.id)}"
+><a
+  class="button-link"
+  href="${escapeHtml(block.data.url)}"
+  target="_blank"
+  rel="noopener noreferrer"
+>${escapeHtml(block.data.label)}</a></div>`;
+
+              case "video":
+                return `<div
+  class="block"
+  data-interactivos-block="true"
+  data-block-type="video"
+  data-block-id="${escapeHtml(block.id)}"
+><iframe
+  src="${escapeHtml(block.data.src)}"
+  title="Video"
+  width="100%"
+  height="400"
+  allowfullscreen
+></iframe></div>`;
+
+              default:
+                return "";
+            }
+          })
+          .join("")}
+      </div>
+    `
+  )
+  .join("")}
   </div>
   <script>
     const tabButtons = document.querySelectorAll(".tab-button");
@@ -871,19 +1110,28 @@ async function handleDeleteProject(project: CloudProject) {
 
   return (
     <main className="min-h-screen overflow-x-hidden bg-white">
-      <div className="flex min-h-screen min-w-0 overflow-x-hidden">
+      <div className="flex min-h-screen min-w-0 flex-col overflow-x-hidden lg:flex-row">
         <input
-          ref={importInputRef}
-          type="file"
-          accept=".json,application/json"
-          onChange={handleImportJson}
-          className="hidden"
-        />
+  ref={importInputRef}
+  type="file"
+  accept=".json,application/json"
+  onChange={handleImportJson}
+  className="hidden"
+/>
+
+<input
+  ref={importHtmlInputRef}
+  type="file"
+  accept=".html,text/html"
+  onChange={handleImportHtml}
+  className="hidden"
+/>
 
         <Sidebar
           onExport={handleExport}
           onExportJson={handleExportJson}
           onImportJson={handleOpenImportDialog}
+          onImportHtml={handleOpenImportHtmlDialog}
           onReset={handleResetProject}
           onUndo={handleUndo}
           onRedo={handleRedo}
@@ -893,7 +1141,7 @@ async function handleDeleteProject(project: CloudProject) {
           onThemeChange={setTheme}
         />
 
-        <section className="min-w-0 flex-1 overflow-x-hidden p-4">
+        <section className="min-w-0 flex-1 overflow-x-hidden p-3 sm:p-4">
           <div className="mb-4 flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="text-sm font-semibold text-gray-900">Guardado en la nube</h2>

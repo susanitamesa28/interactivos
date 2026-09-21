@@ -27,7 +27,6 @@ export default function RightPanel({
   setActiveTab,
   addTab,
 }: RightPanelProps) {
-  // ...
   const currentBlocks = tabs[activeTab]?.blocks || [];
 
   function setCurrentBlocks(blocks: Block[]) {
@@ -39,7 +38,7 @@ export default function RightPanel({
   }
 
   return (
-   <aside className="w-80 min-w-0 shrink-0 overflow-y-auto overflow-x-hidden border-l bg-white p-6">
+    <aside className="w-full min-w-0 shrink-0 border-t bg-white p-4 sm:p-6 lg:w-80 lg:overflow-y-auto lg:border-l lg:border-t-0">
       <Properties
         title={title}
         description={description}
@@ -47,16 +46,17 @@ export default function RightPanel({
         setDescription={setDescription}
       />
 
-      <div className="my-4 border-t"></div>
+      <div className="my-4 border-t" />
 
       <TabManager
-  tabs={tabs}
-  activeTab={activeTab}
-  setTabs={setTabs}
-  setActiveTab={setActiveTab}
-  addTab={addTab}
-/>
-      <div className="my-4 border-t"></div>
+        tabs={tabs}
+        activeTab={activeTab}
+        setTabs={setTabs}
+        setActiveTab={setActiveTab}
+        addTab={addTab}
+      />
+
+      <div className="my-4 border-t" />
 
       <BlockManager
         blocks={currentBlocks}
