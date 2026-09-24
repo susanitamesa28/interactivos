@@ -225,6 +225,8 @@ export default function NewInteractivePage() {
   const canUndo = history.past.length > 0;
   const canRedo = history.future.length > 0;
   const [publicUrl, setPublicUrl] = useState("");
+  const [isPublishing, setIsPublishing] = useState(false);
+const [publicUrlMessage, setPublicUrlMessage] = useState("");
   const [iframeHeight, setIframeHeight] = useState("720");
   const [iframeCopied, setIframeCopied] = useState(false);
   const [user, setUser] = useState<User | null>(null);
@@ -383,6 +385,7 @@ useEffect(() => {
         title: projectTitle,
         description: projectDescription,
         content: projectContent,
+is_public: false,
       })
       .select("id, updated_at")
       .single();
@@ -1097,7 +1100,50 @@ async function handleImportHtml(
       window.alert("No se pudo copiar automáticamente. Revisa los permisos del navegador.");
     }
   }
+async function handleCreatePublicUrl() {
+  if (!user) {
+    setIsAuthModalOpen(true);
+    return;
+  }
 
+  if (!cloudProjectId) {
+    setPublicUrlMessage(
+      "Primero guarda el proyecto en la nube."
+    );
+    return;
+  }
+
+  setIsPublishing(true);
+  setPublicUrlMessage("");
+
+  try {
+    const { data, error } = await supabase
+      .from("projects")
+      .update({
+        is_public: true,
+      })
+      .eq("id", cloudProjectId)
+      .eq("user_id", user.id)
+      .select("id")
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+const generatedUrl =
+  `${window.location.origin}/interactivos/view/?id=${data.id}`;
+    setPublicUrl(generatedUrl);
+    setPublicUrlMessage("URL pública creada correctamente.");
+  } catch (error: any) {
+    console.error("No se pudo publicar el proyecto:", error);
+    setPublicUrlMessage(
+      error?.message || "No se pudo crear la URL pública."
+    );
+  } finally {
+    setIsPublishing(false);
+  }
+}
   if (!hasLoaded) {
     return (
       <main className="min-h-screen bg-white">
@@ -1222,7 +1268,19 @@ async function handleImportHtml(
               </ul>
             </div>
           )}
-
+<button
+  type="button"
+  onClick={handleCreatePublicUrl}
+  disabled={isPublishing}
+  className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
+>
+  {isPublishing ? "Creando URL..." : "Crear URL pública"}
+</button>
+{publicUrlMessage && (
+  <p className="text-sm text-gray-600">
+    {publicUrlMessage}
+  </p>
+)}
           <p className="mb-3 text-sm text-gray-500">{saved ? "Guardado" : "Cambios pendientes..."}</p>
 
           <div className="mb-4 rounded-xl border border-gray-400 bg-gray-50 p-4">
@@ -1235,10 +1293,10 @@ async function handleImportHtml(
                   type="url"
                   value={publicUrl}
                   onChange={(event) => setPublicUrl(event.target.value)}
-                  placeholder="https://susanitamesa28.github.io/interactivos/demo.html"
-                  aria-label="URL pública del interactivo"
-                  className="w-full min-w-0 rounded border border-gray-300 px-3 py-2 text-gray-900 placeholder:text-gray-600"
-                />
+                 placeholder="Pulsa «Crear URL pública»"
+  aria-label="URL pública del interactivo"
+  className="w-full min-w-0 rounded border border-gray-300 px-3 py-2 text-gray-900 placeholder:text-gray-600"
+/>
               </label>
               <label className="block">
                 <span className="mb-1 block text-sm font-medium text-gray-700">Alto del iframe en píxeles</span>
