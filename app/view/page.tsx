@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase";
 type PublicProject = {
   title: string;
   description: string | null;
+  updated_at: string | null;
   content: {
     tabs: Array<{
       id: string;
@@ -16,7 +17,8 @@ type PublicProject = {
         data: any;
       }>;
     }>;
-    theme: "default" | "unibe" | "unphu" | "rosario";
+   theme: "default" | "unibe" | "unphu" | "rosario";
+tabOrientation?: "horizontal" | "vertical";
   };
 };
 
@@ -42,6 +44,12 @@ function buildInteractiveHtml(project: PublicProject) {
   const safeTitle = escapeHtml(project.title);
   const safeDescription = escapeHtml(project.description || "");
 
+const updatedText = project.updated_at
+  ? `Actualizado: ${new Intl.DateTimeFormat("es", {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }).format(new Date(project.updated_at))}`
+  : "";
   const themeColors = {
     default: {
       primary: "#0035E5",
@@ -67,20 +75,35 @@ function buildInteractiveHtml(project: PublicProject) {
 
   const colors = themeColors[project.content.theme] || themeColors.default;
   const tabs = project.content.tabs || [];
+const tabOrientation =
+  project.content.tabOrientation || "horizontal";
 
+const tabsClass =
+  tabOrientation === "vertical"
+    ? "tabs tabs-vertical"
+    : "tabs";
   const tabButtons = tabs
     .map(
       (tab, index) =>
-        `<button class="tab-button ${
-          index === 0 ? "active" : ""
-        }" data-tab="${index}">${escapeHtml(tab.title)}</button>`
+       `<button
+  class="tab-button ${index === 0 ? "active" : ""}"
+  data-tab="${index}"
+  role="tab"
+  aria-selected="${index === 0 ? "true" : "false"}"
+>
+  ${escapeHtml(tab.title)}
+</button>`
     )
     .join("");
 
   const tabPanels = tabs
     .map(
       (tab, index) => `
-        <div class="tab-panel ${index === 0 ? "active" : ""}" data-panel="${index}">
+        <div
+  class="tab-panel ${index === 0 ? "active" : ""}"
+  data-panel="${index}"
+  role="tabpanel"
+>
           ${tab.blocks
             .map((block) => {
               switch (block.type) {
@@ -156,14 +179,27 @@ function buildInteractiveHtml(project: PublicProject) {
       margin-top: 0;
       color: var(--primary-color);
     }
-
+.updated-at {
+  margin-top: 4px;
+  color: #666;
+  font-size: 0.9rem;
+}
     .tabs {
       display: flex;
       gap: 8px;
       flex-wrap: wrap;
       margin: 24px 0 16px;
     }
+.tabs-vertical {
+  flex-direction: column;
+  align-items: stretch;
+  max-width: 260px;
+}
 
+.tabs-vertical .tab-button {
+  width: 100%;
+  text-align: left;
+}
     .tab-button {
       border: 1px solid var(--secondary-color);
       background: #fff;
@@ -214,8 +250,13 @@ function buildInteractiveHtml(project: PublicProject) {
   <div class="wrap">
     <h1>${safeTitle}</h1>
     <p>${safeDescription}</p>
-
-    <div class="tabs">
+<p class="updated-at">${updatedText}</p>
+   <div
+  class="${tabsClass}"
+  role="tablist"
+  aria-orientation="${tabOrientation}"
+  aria-label="Secciones del interactivo"
+>
       ${tabButtons}
     </div>
 
@@ -263,7 +304,7 @@ async function loadProject() {
 
   const { data, error } = await supabase
     .from("projects")
-    .select("title, description, content")
+   .select("title, description, updated_at, content")
     .eq("id", projectId)
     .eq("is_public", true)
     .maybeSingle();
