@@ -24,10 +24,11 @@ type CloudProject = {
   id: string;
   title: string;
   description: string;
-  content: {
-    tabs: Tab[];
-    theme: UniversityTheme;
-  };
+ content: {
+  tabs: Tab[];
+  theme: UniversityTheme;
+  tabOrientation?: "horizontal" | "vertical";
+};
   created_at: string;
   updated_at: string;
 };
@@ -198,23 +199,56 @@ function isValidImportedProject(
   title?: string;
   description?: string;
   tabs: Tab[];
+  activeTab?: number;
   theme?: UniversityTheme;
+  tabOrientation?: "horizontal" | "vertical";
 } {
-  return (
-    isRecord(value) &&
-    (typeof value.title === "undefined" || typeof value.title === "string") &&
-    (typeof value.description === "undefined" ||
-      typeof value.description === "string") &&
-    Array.isArray(value.tabs) &&
-    value.tabs.every(isValidImportedTab) &&
-    (typeof value.theme === "undefined" ||
-      value.theme === "default" ||
-      value.theme === "unibe" ||
-      value.theme === "unphu" ||
-      value.theme === "rosario")
-  );
-}
+  if (!isRecord(value)) return false;
 
+  if (
+    typeof value.title !== "undefined" &&
+    typeof value.title !== "string"
+  ) {
+    return false;
+  }
+
+  if (
+    typeof value.description !== "undefined" &&
+    typeof value.description !== "string"
+  ) {
+    return false;
+  }
+
+  if (!Array.isArray(value.tabs)) return false;
+  if (!value.tabs.every(isValidImportedTab)) return false;
+
+  if (
+    typeof value.activeTab !== "undefined" &&
+    typeof value.activeTab !== "number"
+  ) {
+    return false;
+  }
+
+  if (
+    typeof value.theme !== "undefined" &&
+    value.theme !== "default" &&
+    value.theme !== "unibe" &&
+    value.theme !== "unphu" &&
+    value.theme !== "rosario"
+  ) {
+    return false;
+  }
+
+  if (
+    typeof value.tabOrientation !== "undefined" &&
+    value.tabOrientation !== "horizontal" &&
+    value.tabOrientation !== "vertical"
+  ) {
+    return false;
+  }
+
+  return true;
+}
 function escapeHtml(value: string) {
   return value
     .replaceAll("&", "&amp;")
@@ -369,12 +403,11 @@ useEffect(() => {
 
     const projectTitle = title.trim() || "Nuevo interactivo";
     const projectDescription = description.trim();
-    const projectContent = {
+   const projectContent = {
   tabs,
   theme,
   tabOrientation,
 };
-
     setIsCloudSaving(true);
 
     if (cloudProjectId) {
@@ -628,16 +661,18 @@ async function handleDeleteProject(project: CloudProject) {
       try {
         const parsed: unknown = JSON.parse(savedProject);
         if (isValidImportedProject(parsed) && parsed.tabs.length > 0) {
-          dispatch({
-            type: "RESET_HISTORY",
-            project: {
-              title: parsed.title ?? "Nuevo interactivo",
-              description: parsed.description ?? "Descripción del interactivo",
-              tabs: parsed.tabs,
-              activeTab: 0,
-              theme: parsed.theme ?? "default",
-            },
-          });
+    dispatch({
+  type: "RESET_HISTORY",
+  project: {
+    title: parsed.title ?? "Nuevo interactivo",
+    description:
+      parsed.description ?? "Descripción del interactivo",
+    tabs: parsed.tabs,
+    activeTab: parsed.activeTab ?? 0,
+    theme: parsed.theme ?? "default",
+    tabOrientation: parsed.tabOrientation ?? "horizontal",
+  },
+});
         } else {
           dispatch({ type: "RESET_HISTORY", project: createInitialProject() });
         }
@@ -661,7 +696,13 @@ async function handleDeleteProject(project: CloudProject) {
     if (!hasLoaded) return;
     localStorage.setItem(
       STORAGE_KEY,
-      JSON.stringify({ title, description, tabs, theme })
+     JSON.stringify({
+  title,
+  description,
+  tabs,
+  theme,
+  tabOrientation,
+})
     );
   }, [title, description, tabs, theme, hasLoaded]);
 
@@ -697,54 +738,86 @@ async function handleDeleteProject(project: CloudProject) {
     setExportErrors([]);
   }
 
-  function handleExportJson() {
-    const blob = new Blob(
-      [JSON.stringify({ title, description, tabs, theme }, null, 2)],
-      { type: "application/json" }
-    );
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "interactivo-proyecto.json";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  }
+ function handleExportJson() {
+  const blob = new Blob(
+    [
+      JSON.stringify(
+        {
+          title,
+          description,
+          tabs,
+          theme,
+          tabOrientation,
+        },
+        null,
+        2
+      ),
+    ],
+    { type: "application/json" }
+  );
 
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = "interactivo-proyecto.json";
+
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+
+  URL.revokeObjectURL(url);
+}
   function handleOpenImportDialog() {
     importInputRef.current?.click();
   }
 
-  async function handleImportJson(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  async function handleImportJson(
+  event: ChangeEvent<HTMLInputElement>
+) {
+  const file = event.target.files?.[0];
 
-    try {
-      const parsed: unknown = JSON.parse(await file.text());
-      if (!isValidImportedProject(parsed)) {
-        window.alert("El archivo JSON no tiene un formato válido.");
-        return;
-      }
+  if (!file) return;
 
-      dispatch({
-        type: "RESET_HISTORY",
-        project: {
-          title: parsed.title ?? "Nuevo interactivo",
-          description: parsed.description ?? "Descripción del interactivo",
-          tabs: parsed.tabs.length > 0 ? parsed.tabs : createDefaultTabs(),
-          activeTab: 0,
-          theme: parsed.theme ?? "default",
-        },
-      });
-      setExportErrors([]);
-    } catch (error) {
-      console.error("No se pudo importar el archivo JSON:", error);
-      window.alert("No se pudo importar el archivo. Verifica que sea un JSON válido.");
-    } finally {
-      event.target.value = "";
+  try {
+    const parsed: unknown = JSON.parse(await file.text());
+
+    if (!isValidImportedProject(parsed)) {
+      window.alert("El archivo JSON no tiene un formato válido.");
+      return;
     }
+
+    dispatch({
+      type: "RESET_HISTORY",
+      project: {
+        title: parsed.title ?? "Nuevo interactivo",
+        description:
+          parsed.description ?? "Descripción del interactivo",
+        tabs:
+          parsed.tabs.length > 0
+            ? parsed.tabs
+            : createDefaultTabs(),
+        activeTab: parsed.activeTab ?? 0,
+        theme: parsed.theme ?? "default",
+        tabOrientation:
+          parsed.tabOrientation ?? "horizontal",
+      },
+    });
+
+    setCloudProjectId(null);
+    setCloudMessage(
+      "JSON importado. Guarda el proyecto para conservarlo en la nube."
+    );
+    setExportErrors([]);
+  } catch (error) {
+    console.error("No se pudo importar el archivo JSON:", error);
+    window.alert(
+      "No se pudo importar el archivo. Verifica que sea un JSON válido."
+    );
+  } finally {
+    event.target.value = "";
   }
+}
 function handleOpenImportHtmlDialog() {
   importHtmlInputRef.current?.click();
 }
@@ -899,7 +972,8 @@ async function handleImportHtml(
         description: descriptionValue,
         tabs: importedTabs,
         activeTab: 0,
-        theme: "default",
+       theme: "default",
+tabOrientation: "horizontal",
       },
     });
 
@@ -1448,6 +1522,8 @@ const generatedUrl =
         tabs: project.content.tabs,
         activeTab: 0,
         theme: project.content.theme ?? "default",
+        tabOrientation:
+  project.content.tabOrientation ?? "horizontal",
       },
     });
 
@@ -1490,6 +1566,7 @@ const generatedUrl =
           tabs: project.content.tabs,
           activeTab: 0,
           theme: project.content.theme ?? "default",
+          tabOrientation: project.content.tabOrientation ?? "horizontal",
         },
       });
 
@@ -1498,22 +1575,7 @@ const generatedUrl =
       setProjectsMessage("");
       setIsProjectsOpen(false);
     }}
-    className="rounded-md bg-blue-700 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-800"
-  >
-    Abrir
-  </button>
-
-  <button
-    type="button"
-    onClick={() => void handleDuplicateProject(project)}
-    className="rounded-md border border-blue-700 bg-white px-3 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50"
-  >
-    Duplicar
-  </button>
-
-  <button
-    type="button"
-    onClick={() => void handleDeleteProject(project)}
+  
     className="rounded-md border border-red-600 bg-white px-3 py-2 text-sm font-semibold text-red-700 hover:bg-red-50"
   >
     Eliminar
