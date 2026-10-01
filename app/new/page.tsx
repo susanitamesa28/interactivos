@@ -37,6 +37,7 @@ type ProjectState = {
   tabs: Tab[];
   activeTab: number;
   theme: UniversityTheme;
+  tabOrientation: "horizontal" | "vertical";
 };
 
 type HistoryState = {
@@ -49,7 +50,11 @@ type HistoryAction =
   | { type: "SET_PROJECT"; project: ProjectState }
   | { type: "RESET_HISTORY"; project: ProjectState }
   | { type: "UNDO" }
-  | { type: "REDO" };
+  | { type: "REDO" }
+  | {
+      type: "SET_TAB_ORIENTATION";
+      orientation: "horizontal" | "vertical";
+    };
 
 function createDefaultTabs(): Tab[] {
   return [
@@ -75,6 +80,7 @@ function createInitialProject(): ProjectState {
     tabs: createDefaultTabs(),
     activeTab: 0,
     theme: "default",
+    tabOrientation: "horizontal",
   };
 }
 
@@ -96,6 +102,7 @@ function historyReducer(
 
   if (action.type === "UNDO") {
     const previous = state.past.at(-1);
+    
     if (!previous) return state;
 
     return {
@@ -115,7 +122,16 @@ function historyReducer(
       future: state.future.slice(1),
     };
   }
-
+  if (action.type === "SET_TAB_ORIENTATION") {
+    return {
+      past: [...state.past, state.present].slice(-30),
+      present: {
+        ...state.present,
+        tabOrientation: action.orientation,
+      },
+      future: [],
+    };
+  }
   return state;
 }
 
@@ -215,7 +231,14 @@ export default function NewInteractivePage() {
     future: [],
   });
 
-  const { title, description, tabs, activeTab, theme } = history.present;
+ const {
+  title,
+  description,
+  tabs,
+  activeTab,
+  theme,
+  tabOrientation,
+} = history.present;
   const [hasLoaded, setHasLoaded] = useState(false);
   const [saved, setSaved] = useState(true);
   const [exportErrors, setExportErrors] = useState<string[]>([]);
@@ -346,7 +369,11 @@ useEffect(() => {
 
     const projectTitle = title.trim() || "Nuevo interactivo";
     const projectDescription = description.trim();
-    const projectContent = { tabs, theme };
+    const projectContent = {
+  tabs,
+  theme,
+  tabOrientation,
+};
 
     setIsCloudSaving(true);
 
@@ -1309,6 +1336,23 @@ const generatedUrl =
                 />
               </label>
             </div>
+            <label className="flex items-center gap-2">
+  <span>Orientación de pestañas</span>
+
+  <select
+    value={tabOrientation}
+    onChange={(event) =>
+      dispatch({
+        type: "SET_TAB_ORIENTATION",
+        orientation: event.target.value as "horizontal" | "vertical",
+      })
+    }
+    className="rounded border border-gray-300 px-2 py-1"
+  >
+    <option value="horizontal">Horizontales</option>
+    <option value="vertical">Verticales a la izquierda</option>
+  </select>
+</label>
             <button type="button" onClick={handleCopyIframeCode} className="mt-4 rounded bg-blue-700 px-4 py-2 text-sm font-medium text-white hover:bg-blue-800">
               {iframeCopied ? "Código copiado" : "Copiar código iframe"}
             </button>

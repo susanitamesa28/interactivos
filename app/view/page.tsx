@@ -190,6 +190,51 @@ const tabsClass =
       flex-wrap: wrap;
       margin: 24px 0 16px;
     }
+      .interactive-layout {
+  display: block;
+}
+
+.interactive-layout.vertical {
+  display: flex;
+  align-items: flex-start;
+  gap: 24px;
+}
+
+.interactive-layout.vertical .tabs {
+  display: flex;
+  flex: 0 0 220px;
+  flex-direction: column;
+  align-items: stretch;
+  margin: 24px 0 16px;
+}
+
+.interactive-layout.vertical .tab-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.interactive-layout.vertical .tab-button {
+  width: 100%;
+  text-align: left;
+}
+
+.interactive-layout.vertical .tab-panel {
+  width: 100%;
+}
+  @media (max-width: 700px) {
+  .interactive-layout.vertical {
+    display: block;
+  }
+
+  .interactive-layout.vertical .tabs {
+    width: 100%;
+    margin-bottom: 16px;
+  }
+
+  .interactive-layout.vertical .tab-button {
+    text-align: center;
+  }
+}
 .tabs-vertical {
   flex-direction: column;
   align-items: stretch;
@@ -251,16 +296,20 @@ const tabsClass =
     <h1>${safeTitle}</h1>
     <p>${safeDescription}</p>
 <p class="updated-at">${updatedText}</p>
-   <div
-  class="${tabsClass}"
-  role="tablist"
-  aria-orientation="${tabOrientation}"
-  aria-label="Secciones del interactivo"
->
-      ${tabButtons}
-    </div>
+   <div class="interactive-layout ${tabOrientation}">
+  <div
+    class="${tabsClass}"
+    role="tablist"
+    aria-orientation="${tabOrientation}"
+    aria-label="Secciones del interactivo"
+  >
+    ${tabButtons}
+  </div>
 
+  <div class="tab-content">
     ${tabPanels}
+  </div>
+</div>
   </div>
 
   <script>
