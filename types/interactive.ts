@@ -1,50 +1,47 @@
-export type BlockType = "text" | "image" | "video" | "button";
-
-export interface BaseBlock {
+export type TextBlock = {
   id: string;
-  type: BlockType;
-}
-
-export interface TextBlock extends BaseBlock {
   type: "text";
   data: string;
-}
+};
 
-export interface ImageBlock extends BaseBlock {
+export type ImageBlock = {
+  id: string;
   type: "image";
   data: {
     src: string;
     alt: string;
+    size?: "small" | "medium" | "large";
+    alignment?: "left" | "center" | "right";
+    fit?: "contain" | "cover";
   };
-}
+};
 
-export interface VideoBlock extends BaseBlock {
-  type: "video";
-  data: {
-    src: string;
-  };
-}
-
-export interface ButtonBlock extends BaseBlock {
+export type ButtonBlock = {
+  id: string;
   type: "button";
   data: {
     label: string;
     url: string;
   };
-}
+};
 
-export type Block = TextBlock | ImageBlock | VideoBlock | ButtonBlock;
+export type VideoBlock = {
+  id: string;
+  type: "video";
+  data: {
+    src: string;
+  };
+};
 
-export interface Tab {
+export type Block =
+  | TextBlock
+  | ImageBlock
+  | ButtonBlock
+  | VideoBlock;
+
+export type Tab = {
   id: string;
   title: string;
   content: string;
   blocks: Block[];
-}
-
-export interface InteractiveProject {
-  id?: string;
-  title: string;
-  description: string;
-  tabs: Tab[];
-}
+};

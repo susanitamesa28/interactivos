@@ -592,7 +592,7 @@ async function handleDeleteProject(project: CloudProject) {
   function updateProject(updater: (project: ProjectState) => ProjectState) {
     dispatch({ type: "SET_PROJECT", project: updater(history.present) });
   }
-
+  
   const addTab = () => {
     updateProject((project) => {
       const newTabIndex = project.tabs.length;
@@ -616,7 +616,36 @@ async function handleDeleteProject(project: CloudProject) {
       };
     });
   };
+function updateImageBlock(
+  blockId: string,
+  field:
+    | "src"
+    | "alt"
+    | "size"
+    | "alignment"
+    | "fit",
+  value: string
+) {
+  updateProject((project) => ({
+    ...project,
+    tabs: project.tabs.map((tab) => ({
+      ...tab,
+      blocks: tab.blocks.map((block) => {
+        if (block.id !== blockId || block.type !== "image") {
+          return block;
+        }
 
+        return {
+          ...block,
+          data: {
+            ...block.data,
+            [field]: value,
+          },
+        };
+      }),
+    })),
+  }));
+}
   const setTitle: Dispatch<SetStateAction<string>> = (value) => {
     updateProject((project) => ({
       ...project,
@@ -1480,110 +1509,81 @@ const generatedUrl =
     {!isProjectsLoading && projects.length > 0 && (
       <div className="mt-4 space-y-3">
         {projects.map((project) => (
-          <article
-            key={project.id}
-            className="rounded-lg border border-gray-200 bg-white p-4"
-          >
-            <h3 className="font-semibold text-gray-900">
-              {project.title || "Sin título"}
-            </h3>
-
-            {project.description && (
-              <p className="mt-1 text-sm text-gray-600">
-                {project.description}
-              </p>
-            )}
-
-            <p className="mt-2 text-xs text-gray-500">
-              Modificado:{" "}
-              {new Date(project.updated_at).toLocaleString("es-MX")}
-            </p>
-
-            <div className="mt-3">
-              <button
-  type="button"
-  onClick={() => {
-    if (
-      !project.content ||
-      !Array.isArray(project.content.tabs) ||
-      project.content.tabs.length === 0
-    ) {
-      setProjectsMessage(
-        "Este proyecto no tiene un contenido válido para abrir."
-      );
-      return;
-    }
-
-    dispatch({
-      type: "RESET_HISTORY",
-      project: {
-        title: project.title,
-        description: project.description,
-        tabs: project.content.tabs,
-        activeTab: 0,
-        theme: project.content.theme ?? "default",
-        tabOrientation:
-  project.content.tabOrientation ?? "horizontal",
-      },
-    });
-
-    setCloudProjectId(project.id);
-    setCloudMessage(`Proyecto "${project.title}" abierto.`);
-    setProjectsMessage("");
-    setIsProjectsOpen(false);
-  }}
-  className="rounded-md bg-blue-700 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-800"
->
-  Abrir
-</button>
-<button
-  type="button"
-  onClick={() => void handleDuplicateProject(project)}
-  className="rounded-md border border-blue-700 bg-white px-3 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50"
->
-  Duplicar
-</button>
-<div className="mt-3 flex flex-wrap gap-2">
-  <button
-    type="button"
-    onClick={() => {
-      if (
-        !project.content ||
-        !Array.isArray(project.content.tabs) ||
-        project.content.tabs.length === 0
-      ) {
-        setProjectsMessage(
-          "Este proyecto no tiene un contenido válido para abrir."
-        );
-        return;
-      }
-
-      dispatch({
-        type: "RESET_HISTORY",
-        project: {
-          title: project.title,
-          description: project.description,
-          tabs: project.content.tabs,
-          activeTab: 0,
-          theme: project.content.theme ?? "default",
-          tabOrientation: project.content.tabOrientation ?? "horizontal",
-        },
-      });
-
-      setCloudProjectId(project.id);
-      setCloudMessage(`Proyecto "${project.title}" abierto.`);
-      setProjectsMessage("");
-      setIsProjectsOpen(false);
-    }}
-  
-    className="rounded-md border border-red-600 bg-white px-3 py-2 text-sm font-semibold text-red-700 hover:bg-red-50"
+  <article
+    key={project.id}
+    className="rounded-lg border border-gray-200 bg-white p-4"
   >
-    Eliminar
-  </button>
-</div>
-            </div>
-          </article>
-        ))}
+    <h3 className="font-semibold text-gray-900">
+      {project.title || "Sin título"}
+    </h3>
+
+    {project.description && (
+      <p className="mt-1 text-sm text-gray-600">
+        {project.description}
+      </p>
+    )}
+
+    <p className="mt-2 text-xs text-gray-500">
+      Modificado:{" "}
+      {new Date(project.updated_at).toLocaleString("es-MX")}
+    </p>
+
+    <div className="mt-3 flex flex-wrap gap-2">
+      <button
+        type="button"
+        onClick={() => {
+          if (
+            !project.content ||
+            !Array.isArray(project.content.tabs) ||
+            project.content.tabs.length === 0
+          ) {
+            setProjectsMessage(
+              "Este proyecto no tiene un contenido válido para abrir."
+            );
+            return;
+          }
+
+          dispatch({
+            type: "RESET_HISTORY",
+            project: {
+              title: project.title,
+              description: project.description,
+              tabs: project.content.tabs,
+              activeTab: 0,
+              theme: project.content.theme ?? "default",
+              tabOrientation:
+                project.content.tabOrientation ?? "horizontal",
+            },
+          });
+
+          setCloudProjectId(project.id);
+          setCloudMessage(`Proyecto "${project.title}" abierto.`);
+          setProjectsMessage("");
+          setIsProjectsOpen(false);
+        }}
+        className="rounded-md bg-blue-700 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-800"
+      >
+        Abrir
+      </button>
+
+      <button
+        type="button"
+        onClick={() => void handleDuplicateProject(project)}
+        className="rounded-md border border-blue-700 bg-white px-3 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50"
+      >
+        Duplicar
+      </button>
+
+      <button
+        type="button"
+        onClick={() => void handleDeleteProject(project)}
+        className="rounded-md border border-red-600 bg-white px-3 py-2 text-sm font-semibold text-red-700 hover:bg-red-50"
+      >
+        Eliminar
+      </button>
+    </div>
+  </article>
+))}
       </div>
     )}
   </div>
@@ -1599,16 +1599,17 @@ const generatedUrl =
         </section>
 
         <RightPanel
-          title={title}
-          description={description}
-          setTitle={setTitle}
-          setDescription={setDescription}
-          tabs={tabs}
-          activeTab={activeTab}
-          setTabs={setTabs}
-          setActiveTab={setActiveTab}
-          addTab={addTab}
-        />
+  title={title}
+  description={description}
+  setTitle={setTitle}
+  setDescription={setDescription}
+  tabs={tabs}
+  activeTab={activeTab}
+  setTabs={setTabs}
+  setActiveTab={setActiveTab}
+  addTab={addTab}
+  onUpdateImageBlock={updateImageBlock}
+/>
       </div>
 
       <AuthModal
